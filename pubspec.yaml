@@ -5,6 +5,7 @@ dependencies:
   flutter:
     sdk: flutter
   html: any
+  http: any
   image: any
   url_launcher: any
 

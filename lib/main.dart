@@ -5,6 +5,7 @@ import './config/application.dart';
 import './views/pages/home.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   Application.initApp();
 
   runApp(new App());
