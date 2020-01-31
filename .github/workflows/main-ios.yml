@@ -38,6 +38,7 @@ jobs:
         MATCH_KEYCHAIN_PASSWORD: ${{ secrets.MATCH_KEYCHAIN_PASSWORD }}
       run: |
         pod install
+        mkdir -p Flutter/flutter_assets/
         fastlane beta
     - name: Test app on apptest.ai
       uses: forcemax/apptestai-test@v1
