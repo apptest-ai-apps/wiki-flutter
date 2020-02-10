@@ -38,5 +38,5 @@ jobs:
       uses: forcemax/apptestai-test@v1
       with:
         accesskey: ${{ secrets.APPTESTAI_KEY }}
-        projectid: 1087
+        projectid: 1105
         packagefile: build/app/outputs/apk/release/app-release.apk

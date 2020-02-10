@@ -44,5 +44,5 @@ jobs:
       uses: forcemax/apptestai-test@v1
       with:
         accesskey: ${{ secrets.APPTESTAI_KEY }}
-        projectid: 1089
+        projectid: 1104
         packagefile: ios/Runner.ipa
