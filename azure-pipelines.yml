@@ -1,0 +1,74 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+jobs:
+  - job: build_android
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - bash: |
+        curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra/releases/stable/linux/flutter_linux_v1.12.13+hotfix.7-stable.tar.xz
+        tar xvf flutter.tar.xz
+      displayName: install flutter
+    - bash: |
+        flutter/bin/flutter pub get
+      displayName: flutter package get
+    - bash: |
+        CURPWD=$(pwd)
+        echo "${SIGNING_KEY}" | base64 --decode > keystore.jks
+        echo "storeFile=${CURPWD}/keystore.jks" > android/key.properties
+        echo "storePassword=${KEY_STORE_PASSWORD}" >> android/key.properties
+        echo "keyAlias=${ALIAS}" >> android/key.properties
+        echo "keyPassword=${KEY_PASSWORD}" >> android/key.properties
+      displayName: create android keystore
+      env:
+        SIGNING_KEY: $(SIGNING_KEY)
+        KEY_STORE_PASSWORD: $(KEY_STORE_PASSWORD)
+        ALIAS: $(ALIAS)
+        KEY_PASSWORD: $(KEY_PASSWORD)
+    - bash: |
+        flutter/bin/flutter build apk --release
+      displayName: build
+    - task: apptestai-test@0
+      inputs:
+        access_key: '$(APPTEST_AI_ACCESS_KEY)'
+        project_id: '1105'
+        binary_path: 'build/app/outputs/apk/release/app-release.apk'
+
+  - job: build_ios
+    pool:
+      vmImage: 'macOS-latest'
+    steps:
+    - task: FlutterInstall@0
+      inputs:
+        channel: 'stable'
+        version: 'custom'
+        customVersion: '1.12.13+hotfix.7'
+    - bash: |
+        $(FlutterToolPath)/flutter pub get
+      displayName: flutter package get
+    - bash: |
+        pod install
+        mkdir -p Flutter/flutter_assets/
+        fastlane beta
+      displayName: build
+      workingDirectory: ./ios
+      env:
+        APPLE_ID: $(APPLE_ID)
+        TEAM_ID: $(TEAM_ID)
+        APP_BUNDLE_ID: $(APP_BUNDLE_ID)
+        MATCH_PASSWORD: $(MATCH_PASSWORD)
+        FASTLANE_CERT_REPO: $(FASTLANE_CERT_REPO)
+        MATCH_GIT_BASIC_AUTHORIZATION: $(MATCH_GIT_BASIC_AUTHORIZATION)
+        MATCH_KEYCHAIN_NAME: $(MATCH_KEYCHAIN_NAME)
+        MATCH_KEYCHAIN_PASSWORD: $(MATCH_KEYCHAIN_PASSWORD)
+    - task: apptestai-test@0
+      inputs:
+        access_key: '$(APPTEST_AI_ACCESS_KEY)'
+        project_id: '1104'
+        binary_path: 'ios/Runner.ipa'
