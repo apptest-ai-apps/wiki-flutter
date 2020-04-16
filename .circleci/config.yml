@@ -39,8 +39,50 @@ jobs:
       - store_test_results:
           path: test-results
 
+  build-ios:
+    macos:
+      xcode: 11.3.1
+    steps:
+      - checkout
+      - restore_cache:
+          keys: 
+            - flutter-cache
+      - run:
+          name: download flutter SDK
+          command: if ! test -f "flutter_sdk.zip"; then curl -o flutter_sdk.zip https://storage.googleapis.com/flutter_infra/releases/stable/macos/flutter_macos_v1.12.13+hotfix.9-stable.zip; fi
+      - run:
+          name: unzip flutter SDK
+          command: unzip flutter_sdk.zip
+      - run:
+          name: export flutter path
+          command: echo 'export PATH="$PATH:`pwd`/flutter/bin"'  >> $BASH_ENV
+      - run:
+          name: flutter doctor
+          command: flutter doctor -v
+      - run:
+          name: flutter package get
+          command: flutter pub get
+      - run:
+          name: build
+          working-directory: ./ios
+          command: |
+            pod install
+            mkdir -p Flutter/flutter_assets/
+            fastlane beta
+      - save_cache:
+          key: flutter-cache
+          paths:
+            - flutter_sdk.zip
+      - apptest-ai/run-test:
+          binary_path: "ios/Runner.ipa"
+          project_id: "1104"
+      - store_artifacts:
+          path: test-results
+      - store_test_results:
+          path: test-results
 
 workflows:
     build:
       jobs:
         - build-android
+        - build-ios
