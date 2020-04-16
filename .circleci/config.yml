@@ -64,7 +64,7 @@ jobs:
           command: flutter pub get
       - run:
           name: build
-          working-directory: ./ios
+          working_directory: ./ios
           command: |
             pod install
             mkdir -p Flutter/flutter_assets/
