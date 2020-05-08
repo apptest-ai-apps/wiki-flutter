@@ -1,0 +1,88 @@
+version: 2.1
+orbs:
+  apptest-ai: apptestai/android-app-test@volatile
+
+jobs:
+  build-android:
+    environment:
+      JVM_OPTS: -Xmx1536m
+      GRADLE_OPTS: "-XX:+HeapDumpOnOutOfMemoryError -Dorg.gradle.jvmargs=-Xmx1536m -Dorg.gradle.caching=true -Dorg.gradle.configureondemand=true -Dkotlin.compiler.execution.strategy=in-process -Dkotlin.incremental=false"
+    docker:
+      - image: cirrusci/flutter:stable
+    steps:
+      - checkout
+      - run:
+          name: flutter doctor
+          command: flutter doctor -v
+      - run:
+          name: create keystore file, fill key
+          command: |
+            CURPWD=$(pwd)
+            echo "$SIGNING_KEY" | base64 --decode > keystore.jks
+            echo "storeFile=${CURPWD}/keystore.jks" > android/key.properties
+            echo "storePassword=$KEY_STORE_PASSWORD" >> android/key.properties
+            echo "keyAlias=$ALIAS" >> android/key.properties
+            echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
+      - run:
+          name: Run build
+          command: flutter build apk --release
+      - run:
+          name: install jq
+          command: |
+            sudo apt update
+            sudo apt install -y jq
+      - apptest-ai/run-test:
+          binary_path: "build/app/outputs/apk/release/app-release.apk"
+          project_id: "1105"
+      - store_artifacts:
+          path: test-results
+      - store_test_results:
+          path: test-results
+
+  build-ios:
+    macos:
+      xcode: 11.3.1
+    steps:
+      - checkout
+      - restore_cache:
+          keys: 
+            - flutter-cache
+      - run:
+          name: download flutter SDK
+          command: if ! test -f "flutter_sdk.zip"; then curl -o flutter_sdk.zip https://storage.googleapis.com/flutter_infra/releases/stable/macos/flutter_macos_v1.12.13+hotfix.9-stable.zip; fi
+      - run:
+          name: unzip flutter SDK
+          command: unzip flutter_sdk.zip
+      - run:
+          name: export flutter path
+          command: echo 'export PATH="$PATH:`pwd`/flutter/bin"'  >> $BASH_ENV
+      - run:
+          name: flutter doctor
+          command: flutter doctor -v
+      - run:
+          name: flutter package get
+          command: flutter pub get
+      - run:
+          name: build
+          working_directory: ./ios
+          command: |
+            pod install
+            mkdir -p Flutter/flutter_assets/
+            fastlane beta
+      - save_cache:
+          key: flutter-cache
+          paths:
+            - flutter_sdk.zip
+      - apptest-ai/run-test:
+          binary_path: "ios/Runner.ipa"
+          project_id: "1104"
+      - store_artifacts:
+          path: test-results
+      - store_test_results:
+          path: test-results
+
+workflows:
+    build:
+      jobs:
+        - build-android
+        - build-ios
